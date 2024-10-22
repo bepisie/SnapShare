@@ -1,46 +1,51 @@
 const express = require('express');
 const http = require('http');
-const socketIO = require('socket.io');
-
-// Create an Express app
+const socketIo = require('socket.io');
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIo(server);
 
-// Serve static files from the public directory (e.g., index.html)
+const PORT = process.env.PORT || 3000;
+
+// Serve static files
 app.use(express.static('public'));
 
-// WebRTC signaling
+// Store peer names and IDs
+let peerNames = {}; // Store peer IDs and their corresponding names
+
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    // Handle offer sent by one peer
-    socket.on('offer', (offer, targetPeerId) => {
-        io.to(targetPeerId).emit('offer', offer, socket.id);
+    // Register a new peer with a unique name
+    socket.on('register', (peerName) => {
+        peerNames[socket.id] = peerName; // Store peer name by ID
+        // Notify all other peers about the new peer
+        socket.broadcast.emit('new-peer', socket.id, peerName);
     });
 
-    // Handle answer sent by one peer
-    socket.on('answer', (answer, targetPeerId) => {
-        io.to(targetPeerId).emit('answer', answer, socket.id);
+    // Handle signaling for WebRTC connections
+    socket.on('offer', (offer, to) => {
+        socket.to(to).emit('offer', offer, socket.id);
     });
 
-    // Handle ICE candidate exchange
-    socket.on('candidate', (candidate, targetPeerId) => {
-        io.to(targetPeerId).emit('candidate', candidate, socket.id);
+    socket.on('answer', (answer, to) => {
+        socket.to(to).emit('answer', answer);
     });
 
-    // Notify other peers about the new connection
-    socket.broadcast.emit('peer-connect', socket.id);
+    socket.on('candidate', (candidate, to) => {
+        socket.to(to).emit('candidate', candidate);
+    });
 
-    // Notify other peers when a peer disconnects
+    // Handle disconnection
     socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        // Notify other peers of the disconnection
         socket.broadcast.emit('peer-disconnect', socket.id);
-        console.log('A user disconnected:', socket.id);
+        delete peerNames[socket.id]; // Remove the disconnected peer's name
     });
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });

@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Sharing Service</title>
+    <title>SnapShare - P2P File Sharing</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="scripts.js" defer></script>
 </head>
 <body>
-    <div id="container">
-        <h1>AirDrop-like File Sharing</h1>
-        <div id="peers"></div>
-        <input type="file" id="fileInput" style="display: none;">
-        <button id="chooseFileButton">Choose File</button>
+    <div id="airdrop-container">
+        <h1>SnapShare</h1>
+        <div id="peer-grid"></div>
+        <button id="choose-file">Choose File</button>
+        <input type="file" id="file-input" style="display: none;" />
     </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="scripts.js"></script>
 </body>
 </html>

@@ -1,89 +1,42 @@
 const socket = io();
-const container = document.getElementById('container');
-const peersList = document.getElementById('peers');
 let localConnection;
 let dataChannel;
-let peers = {};  // Store active peers
+const peers = {}; // Keep track of connected peers
+let myPeerId = null;
 
-// Adjectives and animals for random peer names
-const adjectives = ['tiny', 'large', 'green', 'copper', 'brave', 'swift', 'radioactive', 'teaming'];
-const animals = ['elk', 'seal', 'cat', 'owl', 'fox', 'spider', 'horse', 'wolf'];
+// Adjectives and animals for peer names
+const adjectives = ['tiny', 'large', 'green', 'brave', 'swift'];
+const animals = ['elk', 'seal', 'cat', 'owl', 'spider', 'horse'];
 
-// Device emoji list for actual peer devices
-const devicesWithEmojis = [
-    { device: 'iPhone', emoji: '📱', userAgent: /iPhone/i },
-    { device: 'Android Phone', emoji: '📱', userAgent: /Android/i },
-    { device: 'Chromebook', emoji: '💻', userAgent: /CrOS/i },
-    { device: 'Desktop', emoji: '🖥️', userAgent: /Win|Mac|Linux/i },
-    { device: 'Tablet', emoji: '📱', userAgent: /iPad|Tablet/i },
-    { device: 'TV', emoji: '📺', userAgent: /TV/i }
-];
-
-// Function to generate a random unique peer name
-function generateUniquePeerName(existingNames) {
-    let name;
-    do {
-        const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-        const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
-        name = `${randomAdjective} ${randomAnimal}`;
-    } while (existingNames.includes(name)); // Ensure name is unique
-    return name;
+// Generate a random peer name
+function generatePeerName() {
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+    return `${randomAdjective} ${randomAnimal}`;
 }
 
-// Function to detect device based on user-agent string
+// Detect device based on the user-agent string
 function detectDevice() {
     const userAgent = navigator.userAgent;
-    for (const device of devicesWithEmojis) {
-        if (device.userAgent.test(userAgent)) {
-            return device;
-        }
-    }
-    // Default to Desktop if no match
-    return { device: 'Desktop', emoji: '🖥️' };
-}
-
-// Add a new peer to the UI
-function addPeer(peerId, peerName) {
-    if (!peers[peerId]) {
-        const peerDiv = document.createElement('div');
-        peerDiv.classList.add('peer');
-        
-        const peerDevice = detectDevice(); // Actual device and emoji (e.g., "iPhone 📱")
-        
-        peerDiv.innerHTML = `
-            <div class="peer-emoji">${peerDevice.emoji}</div>
-            <div class="peer-name">${peerName}</div>
-            <div class="peer-device">${peerDevice.device}</div>
-        `;
-
-        peerDiv.addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-            // Handle peer click, initiate file sharing
-            peerClickHandler(peerId);
-        });
-
-        peersList.appendChild(peerDiv);
-        peers[peerId] = {
-            element: peerDiv,
-            name: peerName,
-            device: peerDevice.device,
-            emoji: peerDevice.emoji
-        };
-
-        // Log peer info when added
-        logPeerInfo(peerId);
+    if (/iPhone|Android/i.test(userAgent)) {
+        return '📱';
+    } else if (/CrOS/.test(userAgent)) {
+        return '💻';
+    } else if (/Win|Mac|Linux/.test(userAgent)) {
+        return '🖥️';
+    } else {
+        return '🖥️';
     }
 }
 
-// Log the peer's name and device when it's added
-function logPeerInfo(peerId) {
-    const peer = peers[peerId];
-    if (peer) {
-        console.log(`Peer Added: ${peer.name} (${peer.device}) - ${peer.emoji}`);
-    }
-}
+// Handle peer connection
+socket.on('connect', () => {
+    myPeerId = socket.id;
+    const peerName = generatePeerName();
+    socket.emit('register-peer', { peerId: myPeerId, peerName, device: detectDevice() });
+});
 
-// Handle offer/answer signaling
+// Handle peer offer
 socket.on('offer', async (offer, from) => {
     localConnection = new RTCPeerConnection();
     createDataChannel(localConnection);
@@ -93,90 +46,53 @@ socket.on('offer', async (offer, from) => {
     socket.emit('answer', answer, from);
 });
 
-socket.on('answer', async (answer) => {
-    await localConnection.setRemoteDescription(new RTCSessionDescription(answer));
-});
-
+// Handle ICE candidates
 socket.on('candidate', async (candidate) => {
     await localConnection.addIceCandidate(new RTCIceCandidate(candidate));
 });
 
-// Remove peer from UI when they disconnect
-socket.on('peer-disconnect', (peerId) => {
-    if (peers[peerId]) {
-        peersList.removeChild(peers[peerId].element);
-        delete peers[peerId];
+// Add peers to the grid
+socket.on('peers', (peers) => {
+    for (const peerId in peers) {
+        addPeer(peers[peerId]);
     }
 });
 
-// Handle file selection and sending
-const fileInput = document.getElementById('fileInput');
-fileInput.onchange = async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
+socket.on('new-peer', (peer) => {
+    addPeer(peer);
+});
 
-    const reader = new FileReader();
-    reader.onload = () => {
-        dataChannel.send(reader.result);
-        log('File sent');
-    };
-    reader.readAsArrayBuffer(file);
-};
-
-// Helper function to log messages
-function log(message) {
-    console.log(message);
+// Add a peer to the UI
+function addPeer(peer) {
+    const peerElement = document.createElement('div');
+    peerElement.classList.add('peer');
+    peerElement.innerText = `${peer.device} ${peer.peerName}`;
+    peerElement.addEventListener('click', () => {
+        document.getElementById('file-input').click();
+    });
+    document.getElementById('peer-grid').appendChild(peerElement);
 }
 
-// Set up data channel for P2P file sharing
+// Create data channel for file sharing
 function createDataChannel(connection) {
     dataChannel = connection.createDataChannel("fileTransfer");
-    dataChannel.onopen = () => log('Data channel open');
-    dataChannel.onclose = () => log('Data channel closed');
-    dataChannel.onmessage = (event) => log(`Received: ${event.data}`);
+    dataChannel.onopen = () => console.log('Data channel open');
+    dataChannel.onmessage = (event) => console.log('Received:', event.data);
 }
 
-// When a peer is clicked
-function peerClickHandler(targetPeerId) {
-    // Create connection and offer for file sharing
-    createConnection(targetPeerId);
-}
-
-// Create new WebRTC connection and offer
-function createConnection(targetPeerId) {
-    localConnection = new RTCPeerConnection();
-    createDataChannel(localConnection);
-
-    localConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            socket.emit('candidate', event.candidate, targetPeerId);
-        }
-    };
-
-    localConnection.createOffer()
-        .then(offer => localConnection.setLocalDescription(offer))
-        .then(() => socket.emit('offer', localConnection.localDescription, targetPeerId));
-}
-
-// Generate and assign a unique name when connecting
-socket.on('connect', () => {
-    const existingNames = Object.values(peers).map(peer => peer.name);
-    const uniquePeerName = generateUniquePeerName(existingNames);
-    socket.emit('register', uniquePeerName); // Send the unique name to the server
+// File handling
+document.getElementById('choose-file').addEventListener('click', () => {
+    document.getElementById('file-input').click();
 });
 
-// Listen for new peer registrations and add them
-socket.on('new-peer', (peerId, peerName) => {
-    addPeer(peerId, peerName);
+document.getElementById('file-input').addEventListener('change', () => {
+    const file = document.getElementById('file-input').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            dataChannel.send(reader.result);
+            console.log('File sent');
+        };
+        reader.readAsArrayBuffer(file);
+    }
 });
-
-// Simulate adding peers (replace with dynamic detection in a real-world case)
-setTimeout(() => {
-    addPeer('peer1', 'Copper Elk'); // Example static peers for demonstration
-    addPeer('peer2', 'Radioactive Seal');
-}, 1000);
-
-// Button click event to trigger file input
-document.getElementById('chooseFileButton').onclick = () => {
-    document.getElementById('fileInput').click();
-};

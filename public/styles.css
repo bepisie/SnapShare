@@ -1,78 +1,54 @@
 body {
-    font-family: 'Helvetica Neue', sans-serif;
-    background-color: #f0f0f5;
-    color: #333;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     height: 100vh;
     margin: 0;
 }
 
-#container {
-    width: 100%;
-    max-width: 600px;
+#airdrop-container {
     text-align: center;
-    padding: 20px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-h1 {
-    font-size: 24px;
-    margin-bottom: 20px;
-}
-
-#peers {
+#peer-grid {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 30px;
 }
 
 .peer {
-    background-color: #e0e0e0;
-    border-radius: 10px;
-    padding: 15px;
+    width: 100px;
+    height: 100px;
+    margin: 10px;
+    border-radius: 50%;
+    background-color: #fff;
     display: flex;
+    justify-content: center;
     align-items: center;
-    justify-content: space-between;
-    transition: transform 0.2s;
+    font-size: 30px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
 }
 
 .peer:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
 }
 
-.peer-emoji {
-    font-size: 24px;
-    margin-right: 10px;
-}
-
-.peer-name {
-    font-weight: bold;
-}
-
-.peer-device {
-    font-size: 14px;
-    color: #666;
-}
-
-#chooseFileButton {
+#choose-file {
+    margin-top: 20px;
     padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
     background-color: #007aff;
     color: white;
-    font-size: 16px;
+    border: none;
+    border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s;
 }
 
-#chooseFileButton:hover {
+#choose-file:hover {
     background-color: #005bb5;
 }
-

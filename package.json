@@ -1,18 +1,16 @@
 {
-    "name": "p2p-file-sharing",
-    "version": "1.0.0",
-    "description": "A peer-to-peer file sharing service using WebRTC and Socket.io",
-    "main": "server.js",
-    "scripts": {
-      "start": "node server.js"
-    },
-    "dependencies": {
-      "express": "^4.18.2",
-      "socket.io": "^4.5.0"
-    },
-    "engines": {
-      "node": "16.x"
-    },
-    "license": "MIT"
+  "name": "snapshare",
+  "version": "1.0.0",
+  "main": "api/signaling.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build"
+  },
+  "dependencies": {
+    "express": "^4.17.3",
+    "socket.io": "^4.3.2"
+  },
+  "engines": {
+    "node": "20.x"
   }
-  
+}
